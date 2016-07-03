@@ -15,7 +15,7 @@ WORKDIR /usr/src/nginx
 
 # Download nginx source
 RUN apt-get update && \
-    apt-get install -y ca-certificates dpkg-dev && \
+    apt-get install -y ca-certificates dpkg-dev apt-utils && \
     apt-get source nginx=${NGINX_VERSION}-1~jessie && \
     apt-get build-dep -y nginx=${NGINX_VERSION}-1~jessie && \
     rm -rf /var/lib/apt/lists/*
@@ -53,39 +53,35 @@ RUN echo 'deb http://www.deb-multimedia.org jessie main non-free' >> /etc/apt/so
     apt-get update && \
     apt-get install -y --force-yes deb-multimedia-keyring && \
     apt-get update && \
-    apt-get install -y \
+    apt-get install -y --force-yes \
         ffmpeg \
         mplayer mencoder \
-        libimage-exiftool-perl
+        libimage-exiftool-perl \
+        ruby git openssl
 
 WORKDIR /usr/local/src
-RUN wget http://rubyforge.org/frs/download.php/17497/flvtool2-1.0.6.tgz && \
-    tar zxvf flvtool2-1.0.6.tgz && \
-    cd /usr/local/src/flvtool2-1.0.6/ && \
-    ruby setup.rb config && ruby setup.rb setup && ruby setup.rb install
+RUN git clone https://github.com/unnu/flvtool2.git && \
+    cd /usr/local/src/flvtool2*/ && \
+    ruby setup.rb config --prefix=/usr/local/ && ruby setup.rb setup && ruby setup.rb install
 
-WORKDIR /usr/src/nginx
-RUN install -y php5-fpm \
-    php5-pdo \
-    php5-pdo_mysql \
+
+RUN apt-get install -y php5-fpm \
+    php5-common \
+    php5-cli php5-cgi \
+    php5-mysqlnd \
     php5-mysql \
-    php5-mysqli \
     php5-mcrypt \
-    php5-ctype \
-    php5-zlib \
     php5-gd \
     php5-intl \
     php5-memcache \
-    php5-sqlite3 \
+    php5-sqlite \
     php5-pgsql \
-    php5-xml \
+    php5-xmlrpc \
     php5-xsl \
     php5-curl \
-    php5-openssl \
-    php5-iconv \
+    php-file \
     php5-json \
-    php5-phar \
-    php5-dom && \
+    php-fdomdocument && \
     curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer
 
 # tweak php-fpm config
