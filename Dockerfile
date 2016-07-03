@@ -7,8 +7,8 @@ RUN echo "deb http://nginx.org/packages/mainline/debian/ jessie nginx" >> /etc/a
 ENV NGINX_VERSION 1.9.6
 ENV RTMP_VERSION 1.1.7
 ENV VOD_VERSION 1.4
-ENV php_conf /etc/php-fpm/php.ini 
-ENV fpm_conf /etc/php-fpm/php-fpm.conf
+ENV php_conf /etc/php5/cgi/php.ini 
+ENV fpm_conf /etc/php5/fpm/php-fpm.conf
 
 RUN mkdir -p /usr/src/nginx
 WORKDIR /usr/src/nginx
@@ -84,6 +84,25 @@ RUN apt-get install -y php5-fpm \
     curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer
 
 
+RUN sed -i -e "s/;cgi.fix_pathinfo=1/cgi.fix_pathinfo=0/g" ${php_conf} && \
+    sed -i -e "s/upload_max_filesize\s*=\s*2M/upload_max_filesize = 5000M/g" ${php_conf} && \
+    sed -i -e "s/post_max_size\s*=\s*8M/post_max_size = 5000M/g" ${php_conf} && \
+    sed -i -e "s/variables_order = \"GPCS\"/variables_order = \"EGPCS\"/g" ${php_conf} && \
+    sed -i -e "s/;daemonize\s*=\s*yes/daemonize = no/g" ${fpm_conf} && \
+    sed -i -e "s/;catch_workers_output\s*=\s*yes/catch_workers_output = yes/g" ${fpm_conf} && \
+    sed -i -e "s/pm.max_children = 4/pm.max_children = 4/g" ${fpm_conf} && \
+    sed -i -e "s/pm.start_servers = 2/pm.start_servers = 3/g" ${fpm_conf} && \
+    sed -i -e "s/pm.min_spare_servers = 1/pm.min_spare_servers = 2/g" ${fpm_conf} && \
+    sed -i -e "s/pm.max_spare_servers = 3/pm.max_spare_servers = 4/g" ${fpm_conf} && \
+    sed -i -e "s/pm.max_requests = 500/pm.max_requests = 200/g" ${fpm_conf} && \
+    sed -i -e "s/user = nobody/user = nginx/g" ${fpm_conf} && \
+    sed -i -e "s/group = nobody/group = nginx/g" ${fpm_conf} && \
+    sed -i -e "s/;listen.mode = 0660/listen.mode = 0666/g" ${fpm_conf} && \
+    sed -i -e "s/;listen.owner = nobody/listen.owner = nginx/g" ${fpm_conf} && \
+    sed -i -e "s/;listen.group = nobody/listen.group = nginx/g" ${fpm_conf} && \
+    sed -i -e "s/listen = 127.0.0.1:9000/listen = \/var\/run\/php-fpm.sock/g" ${fpm_conf}
+
+
 # Cleanup
 RUN apt-get purge -yqq dpkg-dev && \
     apt-get autoremove -yqq && \
@@ -94,7 +113,7 @@ RUN apt-get purge -yqq dpkg-dev && \
 RUN ln -sf /dev/stdout /var/log/nginx/access.log
 RUN ln -sf /dev/stderr /var/log/nginx/error.log
 
-VOLUME ["/var/cache/nginx"]
+VOLUME ["/var/cache/nginx", "/usr/share/nginx/html"]
 
 EXPOSE 80 443
 
